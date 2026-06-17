@@ -1,7 +1,6 @@
 import pygame as py
-import os
+from dataclasses import dataclass
 import json as js
-import math
 
 py.init()
 
@@ -18,7 +17,7 @@ holds_panel_width = display_width
 holds_panel_height = 100
 
 # Dragging state
-is_dragging = False
+mouse_down = False
 SPACING_ON_HOLDS_PANEL = 80
 ROOM_FOR_BUTTONS = 200
 on_row = 0
@@ -62,6 +61,23 @@ class Grid:
 
 grid = Grid(0, 0, (25, 25))
 
+#--------Making Classes-----------
+@dataclass
+class ProcessedHolds:
+    size: int
+    colour: str
+    x : int
+    y : int
+    row : int
+
+@dataclass
+class DisplayedHolds:
+    x : int
+    y : int
+    colour : str
+    size : int
+
+
 # --------------Holds dictionary and size, colour, and type variables-------------- 
 with open("inventory.json", "r") as f:
     holds_data = js.load(f)
@@ -86,7 +102,6 @@ colour_properies = {
 # --------------Main loop-------------- 
 run = True
 while run:
-    processed_holds_data = []
     rows_visible = holds_panel_height // 70
 
     usable_width = holds_panel_width - ROOM_FOR_BUTTONS
@@ -95,21 +110,45 @@ while run:
     if holds_per_row < 1:
         holds_per_row = 1 
 
+    processed_holds_data: list[ProcessedHolds] = []
 
     for i, hold in enumerate(holds_data):
         row_index = i // holds_per_row
         col_index = i % holds_per_row
 
-        processed_holds_data.append({
-            "size": size_properies[hold["size"]],
-            "colour": colour_properies[hold["colour"]],
-            "x": col_index * SPACING_ON_HOLDS_PANEL + 40,
-            "y": holds_panel_height // 2,
-            "row": row_index
-        })
-    
-    possible_rows = (processed_holds_data[-1]["row"] + 1) if processed_holds_data else 1
+        
+        processed_holds_data.append(
+            ProcessedHolds(
+                size = size_properies[hold["size"]],
+                colour = colour_properies[hold["colour"]],
+                x = col_index * SPACING_ON_HOLDS_PANEL + 40,
+                y = holds_panel_height // 2,
+                row = row_index
+            )
+        )
+
+    possible_rows = (processed_holds_data[-1].row + 1) if processed_holds_data else 1
     possible_rows = max(1, possible_rows)
+
+    displayed_holds: list[DisplayedHolds] = []
+    for hold in processed_holds_data:
+
+        slot = (hold.row - on_row) % possible_rows
+
+        if slot < rows_visible:
+            
+
+            displayed_holds.append(
+                DisplayedHolds(
+                    x = hold.x,
+                    y = (holds_panel_height // (rows_visible + 1)) * (slot + 1),
+                    colour = hold.colour,
+                    size = hold.size
+                )
+            )
+            
+            
+ 
     
 
     # ----------Event handling-------------
@@ -129,16 +168,17 @@ while run:
         elif event.type == py.MOUSEBUTTONDOWN:
             # Only start dragging if the click originates in the grab area
             if mouse_grab_area.collidepoint(py.mouse.get_pos()):
-                is_dragging = True
+                mouse_down = True
             elif l_arrow_rect.move(0,display_height - holds_panel_height).collidepoint(py.mouse.get_pos()):
                 on_row = (on_row - 1) % possible_rows
             elif r_arrow_rect.move(0,display_height - holds_panel_height).collidepoint(py.mouse.get_pos()):
                 on_row = (on_row + 1) % possible_rows
+            # else:
+            #     for hold in processed_holds_data:
+            #         if hold 
+                
         elif event.type == py.MOUSEBUTTONUP:
-            is_dragging = False
-
-    # Use dragging state for panel movement
-    mouse_down = is_dragging
+            mouse_down = False
 
     # -----------Panel-------------
     holds_panel_width = display_width
@@ -165,22 +205,14 @@ while run:
     grid.update(display_width, display_height)
     
     # Display holds on the panel
-    for hold in processed_holds_data:
-
-        slot = (hold["row"] - on_row) % possible_rows
-
-        if slot < rows_visible:
-
-            x = hold["x"]
-            y = (holds_panel_height // (rows_visible + 1)) * (slot + 1)
-            colour = hold["colour"]
-            size = hold["size"]
+    
+    for hold in displayed_holds:
 
             py.draw.circle(
                 holds_panel, 
-                colour, 
-                (x, y), 
-                size
+                hold.colour, 
+                (hold.x, hold.y), 
+                hold.size
             )
 
     # Buttons

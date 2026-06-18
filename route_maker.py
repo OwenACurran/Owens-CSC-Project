@@ -197,6 +197,7 @@ while run:
                         break
                 if clicked_hold:
                     drag_hold = HoldDragging(clicked_hold)
+                    drag_hold.y -= (display_height - holds_panel_height) #Adjust for the y being too high
                     
         elif event.type == py.MOUSEMOTION:
             if drag_hold:

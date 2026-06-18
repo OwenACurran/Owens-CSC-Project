@@ -1,5 +1,5 @@
 import pygame as py
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import json as js
 
 py.init()
@@ -76,6 +76,19 @@ class DisplayedHolds:
     y : int
     colour : str
     size : int
+    rect : py.Rect = field(init = False)
+    
+    def __post_init__(self):
+        self.rect = py.Rect(0, 0, self.size * 2, self.size * 2)
+        self.rect.center = (self.x, self.y)
+
+class HoldDragging:
+    def __init__(self, hold_clicked: DisplayedHolds):
+        self.x = hold_clicked.x
+        self.y = hold_clicked.y
+        self.colour = hold_clicked.colour
+        self.size = hold_clicked.size
+
 
 
 # --------------Holds dictionary and size, colour, and type variables-------------- 
@@ -99,6 +112,7 @@ colour_properies = {
     "Orange": "#FF9100"
 }
 
+drag_hold = False
 # --------------Main loop-------------- 
 run = True
 while run:
@@ -158,6 +172,9 @@ while run:
     l_arrow_rect = left_arrow.get_rect(center =(holds_panel_width - 90, holds_panel_height // 2))
     r_arrow_rect = right_arrow.get_rect(center = (holds_panel_width - 30, holds_panel_height// 2))
 
+    mouse_pos = py.mouse.get_pos()
+    
+    clicked_hold = False
     for event in py.event.get():
         if event.type == py.QUIT:
             run = False
@@ -167,32 +184,42 @@ while run:
             screen = py.display.set_mode((display_width, display_height), py.RESIZABLE)
         elif event.type == py.MOUSEBUTTONDOWN:
             # Only start dragging if the click originates in the grab area
-            if mouse_grab_area.collidepoint(py.mouse.get_pos()):
+            if mouse_grab_area.collidepoint(mouse_pos):
                 mouse_down = True
-            elif l_arrow_rect.move(0,display_height - holds_panel_height).collidepoint(py.mouse.get_pos()):
+            elif l_arrow_rect.move(0,display_height - holds_panel_height).collidepoint(mouse_pos):
                 on_row = (on_row - 1) % possible_rows
-            elif r_arrow_rect.move(0,display_height - holds_panel_height).collidepoint(py.mouse.get_pos()):
+            elif r_arrow_rect.move(0,display_height - holds_panel_height).collidepoint(mouse_pos):
                 on_row = (on_row + 1) % possible_rows
-            # else:
-            #     for hold in processed_holds_data:
-            #         if hold 
+            else:
+                for hold in displayed_holds:
+                    if hold.rect.move(0,display_height - holds_panel_height).collidepoint(mouse_pos):
+                        clicked_hold = hold
+                        break
+                if clicked_hold:
+                    drag_hold = HoldDragging(clicked_hold)
+                    
+        elif event.type == py.MOUSEMOTION:
+            if drag_hold:
+                drag_hold.x, drag_hold.y = event.pos
                 
         elif event.type == py.MOUSEBUTTONUP:
+            drag_hold = False
             mouse_down = False
 
+    
     # -----------Panel-------------
     holds_panel_width = display_width
     holds_panel = py.Surface((holds_panel_width, holds_panel_height))
     holds_panel.fill(("#c8c8c8"))
 
     # Cursor feedback
-    if mouse_grab_area.collidepoint(py.mouse.get_pos()):
+    if mouse_grab_area.collidepoint(mouse_pos):
         py.mouse.set_cursor(py.SYSTEM_CURSOR_SIZENS)
     else:
         py.mouse.set_cursor(py.SYSTEM_CURSOR_ARROW)
 
     if mouse_down:
-        new_mouse_y = py.mouse.get_pos()[1]
+        new_mouse_y = mouse_pos[1]
         new_height = display_height - new_mouse_y
         min_h = 70
         max_h = 70 * possible_rows
@@ -224,6 +251,13 @@ while run:
 
     for cell in grid.grid:
         py.draw.circle(screen, ("#000000"), cell, 2)
+
+    if drag_hold:
+        py.draw.circle(screen,
+                        color = drag_hold.colour, 
+                        center = (drag_hold.x, drag_hold.y),
+                        radius = drag_hold.size
+                        )
 
     # Update the display
     screen.blit(holds_panel, (0, display_height - holds_panel_height))

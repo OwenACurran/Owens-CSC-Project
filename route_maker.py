@@ -22,6 +22,11 @@ SPACING_ON_HOLDS_PANEL = 80
 ROOM_FOR_BUTTONS = 200
 on_row = 0
 
+#stuff
+font = py.font.SysFont(None, 36)
+clear_button = font.render("Clear", True, "Black")
+clear_button_rect = clear_button.get_rect()
+
 #---------Image loading---------
 try:
     right_arrow = py.image.load("icons/right_arrow.png").convert_alpha()
@@ -122,6 +127,15 @@ holds_on_grid: list[DisplayedHolds] = []
 # --------------Main loop-------------- 
 run = True
 while run:
+
+    #--------Clear button---------
+    box_round_clear_button_rect = py.Rect(0,0,100,50)
+    box_round_clear_button_rect.center = clear_button_rect.center
+    clear_button_rect.center = (holds_panel_width - 180, holds_panel_height // 2)
+
+
+
+
     rows_visible = holds_panel_height // 70
 
     usable_width = holds_panel_width - ROOM_FOR_BUTTONS
@@ -194,8 +208,13 @@ while run:
                 mouse_down = True
             elif l_arrow_rect.move(0,display_height - holds_panel_height).collidepoint(mouse_pos):
                 on_row = (on_row - 1) % possible_rows
+
             elif r_arrow_rect.move(0,display_height - holds_panel_height).collidepoint(mouse_pos):
                 on_row = (on_row + 1) % possible_rows
+
+            elif box_round_clear_button_rect.move(0,display_height - holds_panel_height).collidepoint(mouse_pos):
+                holds_on_grid.clear()
+
             else:
                 for hold in displayed_holds:
                     if hold.rect.move(0,display_height - holds_panel_height).collidepoint(mouse_pos):
@@ -279,6 +298,14 @@ while run:
                         center = (hold.x, hold.y),
                         radius = hold.size
                         )
+    
+    
+    py.draw.rect(holds_panel, (255, 255, 255), box_round_clear_button_rect, 3)
     # Update the display
+
+    
+    holds_panel.blit(clear_button, clear_button_rect)
     screen.blit(holds_panel, (0, display_height - holds_panel_height))
+
+    
     py.display.flip()

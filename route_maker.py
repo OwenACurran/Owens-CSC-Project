@@ -29,9 +29,13 @@ try:
     left_arrow = py.transform.flip(right_arrow, True, False)
 except py.error:
     print("Failed to load image")
-    
 
-# ---------Grid class-------------
+#---Function for lengths of vectors (no sqrt for efficiency)---
+def length_from_mouse_pos(v):
+    mouse = py.mouse.get_pos()
+    return (v[0] - mouse[0]) ** 2 + (v[1] - mouse[1]) ** 2 # pythagorean theorem but without the square root for efficiency
+
+# ---------Grid class----------
 class Grid:
     def __init__(self, x, y, size=(10, 10)):
         self.x = x
@@ -113,6 +117,8 @@ colour_properies = {
 }
 
 drag_hold = False
+holds_on_grid: list[DisplayedHolds] = []
+
 # --------------Main loop-------------- 
 run = True
 while run:
@@ -201,9 +207,15 @@ while run:
                     
         elif event.type == py.MOUSEMOTION:
             if drag_hold:
-                drag_hold.x, drag_hold.y = event.pos
+                if grid.x <= event.pos[0] <= grid.x + grid.gap * (grid.size[0] - 1) and grid.y <= event.pos[1] <= grid.y + grid.gap * (grid.size[1] - 1):
+                        drag_hold.x, drag_hold.y = min(grid.grid, key = length_from_mouse_pos)
+
+                else: drag_hold.x, drag_hold.y = event.pos
                 
         elif event.type == py.MOUSEBUTTONUP:
+            if drag_hold:
+                holds_on_grid.append(drag_hold)
+                
             drag_hold = False
             mouse_down = False
 
@@ -259,7 +271,14 @@ while run:
                         center = (drag_hold.x, drag_hold.y),
                         radius = drag_hold.size
                         )
-
+    
+    if holds_on_grid:
+        for hold in holds_on_grid:
+            py.draw.circle(screen,
+                        color = hold.colour, 
+                        center = (hold.x, hold.y),
+                        radius = hold.size
+                        )
     # Update the display
     screen.blit(holds_panel, (0, display_height - holds_panel_height))
     py.display.flip()

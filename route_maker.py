@@ -1,3 +1,8 @@
+"""This program manages climbing routes.
+
+It allows for the manual or automatic creation of routes,
+which can then be saved to a JSON file.
+"""
 import pygame as py
 from dataclasses import dataclass, field
 import json as js
@@ -22,7 +27,7 @@ SPACING_ON_HOLDS_PANEL = 80
 ROOM_FOR_BUTTONS = 200
 on_row = 0
 
-#stuff
+# stuff
 font = py.font.SysFont(None, 36)
 clear_button = font.render("Clear", True, "Black")
 clear_button_rect = clear_button.get_rect()
@@ -136,8 +141,7 @@ while run:
 
 
 
-    rows_visible = holds_panel_height // 70
-
+    rows_visible = holds_panel_height
     usable_width = holds_panel_width - ROOM_FOR_BUTTONS
     holds_per_row = usable_width // SPACING_ON_HOLDS_PANEL
 

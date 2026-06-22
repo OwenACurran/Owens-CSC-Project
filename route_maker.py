@@ -160,6 +160,7 @@ def regenerate_menu():
     """Generates menu items"""
     global menu_displayed_holds, possible_rows, holds_menu_width, holds_menu_height
     
+    holds_menu_width = pygame.display.get_window_size()[0]
     rows_visible = max(1, holds_menu_height // 70)
     usable_width = holds_menu_width - ROOM_FOR_BUTTONS
     holds_per_row = max(1, usable_width // SPACING_ON_HOLDS_menu)
@@ -212,7 +213,8 @@ while run:
     r_arrow_rect = right_arrow.get_rect(center = (holds_menu_width - 30, holds_menu_height// 2))
 
     mouse_pos = pygame.mouse.get_pos()
-    
+    holds_menu_width = display_width
+
     clicked_hold = False
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -273,7 +275,6 @@ while run:
             mouse_down = False
 
     # -----------menu-------------
-    holds_menu_width = display_width
     holds_menu = pygame.Surface((holds_menu_width, holds_menu_height))
     holds_menu.fill(("#c8c8c8"))
 

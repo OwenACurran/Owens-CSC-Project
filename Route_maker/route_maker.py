@@ -32,9 +32,6 @@ pygame.display.set_caption("Route Maker")
 # Holds menu dimensions
 holds_menu_width = display_width
 holds_menu_height = 100
-BUTTON_AREA_LEFT = 20
-BUTTON_AREA_WIDTH = 220
-BUTTON_ROW_HEIGHT = 56
 
 # Dragging state
 mouse_down = False
@@ -272,8 +269,7 @@ def regenerate_menu():
     
     holds_menu_width = pygame.display.get_window_size()[0]
     rows_visible = max(1, holds_menu_height // 70)
-    content_start_x = BUTTON_AREA_LEFT + BUTTON_AREA_WIDTH + 20
-    usable_width = max(1, holds_menu_width - content_start_x - 20)
+    usable_width = holds_menu_width - ROOM_FOR_BUTTONS
     holds_per_row = max(1, usable_width // SPACING_ON_HOLDS_menu)
 
     processed_holds_data: list[ProcessedHold] = []
@@ -285,7 +281,7 @@ def regenerate_menu():
             ProcessedHold(
                 radius = size_properies[hold["size"]],
                 colour = colour_properies[hold["colour"]],
-                x = content_start_x + 20 + col_index * SPACING_ON_HOLDS_menu,
+                x = col_index * SPACING_ON_HOLDS_menu + 40,
                 y = holds_menu_height // 2,
                 row = row_index
             )
@@ -312,13 +308,12 @@ run = True
 while run:
 
     #--------Toolbar and settings button---------
-    button_y = holds_menu_height // 2
-    l_arrow_rect = left_arrow.get_rect(center=(BUTTON_AREA_LEFT + 40, button_y))
-    r_arrow_rect = right_arrow.get_rect(center=(BUTTON_AREA_LEFT + 100, button_y))
-    settings_button_rect = settings_button.get_rect(center=(BUTTON_AREA_LEFT + 160, button_y))
+    l_arrow_rect = left_arrow.get_rect(center =(holds_menu_width - 150, holds_menu_height // 2))
+    r_arrow_rect = right_arrow.get_rect(center = (holds_menu_width - 100, holds_menu_height // 2))
+    settings_button_rect = settings_button.get_rect(center = (holds_menu_width -50, holds_menu_height))
     display_width, display_height = pygame.display.get_window_size()
     holds_menu_width = display_width
-    settings_button_rect.center = (BUTTON_AREA_LEFT + 160, button_y)
+    settings_button_rect.center = (display_width - 40, holds_menu_height // 2)
     file_browser_rect.center = (display_width // 2, display_height // 2)
     settings_popup_rect.width = 260
     settings_popup_rect.height = 210
@@ -586,7 +581,7 @@ while run:
         overlay.fill((0, 0, 0, 160))
         screen.blit(overlay, (0, 0))
 
-        # modal
+        # file browser window
         pygame.draw.rect(screen, (30, 30, 30), file_browser_rect)
         pygame.draw.rect(screen, (200, 200, 200), file_browser_rect, 2)
 

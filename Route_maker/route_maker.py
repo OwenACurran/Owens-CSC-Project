@@ -62,29 +62,16 @@ file_browser_open = False
 file_browser_mode = None
 file_browser_files = []
 file_browser_selected = 0
+file_browser_input = ""
 file_browser_rect = pygame.Rect(0, 0, 520, 420)
 
 # Constants for the file browser
 FILE_BROWSER_LIST_X_OFFSET = 20
 FILE_BROWSER_LIST_Y_OFFSET = 40
 FILE_BROWSER_ITEM_HEIGHT = 28
-SAVE_SLOT_COUNT = 3
-FILE_BROWSER_MAX_VISIBLE_ITEMS = SAVE_SLOT_COUNT
-
-
-def get_save_slot_names() -> list[str]:
-    """Return the fixed list of save-slot filenames."""
-    return [f"slot_{slot_number}.json" for slot_number in range(1, SAVE_SLOT_COUNT + 1)]
-
-
-def get_slot_display_name(filename: str, saves_folder: str = None) -> str:
-    """Format the visible label for a save slot."""
-    slot_number = int(os.path.splitext(filename)[0].split("_")[-1])
-    if saves_folder is None:
-        saves_folder = SAVES_FOLDER_NAME
-    slot_path = os.path.join(saves_folder, filename)
-    status = "saved" if os.path.exists(slot_path) else "empty"
-    return f"Save Slot {slot_number} ({status})"
+FILE_BROWSER_MAX_VISIBLE_ITEMS = 10
+FILE_BROWSER_MAX_CHARACTER_INPUT = 30
+BLOCKED_CHARACTERS = ['\\', '/', ':', '*', '?', '"', '<', '>', '|']
 
 
 def get_file_browser_item_rects() -> list[pygame.Rect]: 
@@ -104,8 +91,17 @@ def get_file_browser_item_rects() -> list[pygame.Rect]:
 
 
 def refresh_file_list():
-    """Return the fixed list of save-slot files."""
-    return get_save_slot_names()
+    """Makes a list of files for all the files in the save folder that end with .json"""
+    try:
+        files = [] 
+        for file in os.listdir(SAVES_FOLDER_NAME): # Iterates through the saves folder for each file inside
+            if file.lower().endswith(".json"): # Ensures that the file ends with .json (not case sensitive)
+                files.append(file)
+    # Stops the error when there are no files in the saves
+    except FileNotFoundError:
+        files = [] 
+
+    return files
 
 
 #---------Image loading---------
@@ -318,7 +314,7 @@ def regenerate_menu():
     usable_width = holds_menu_width - ROOM_FOR_BUTTONS
     holds_per_row = max(1, usable_width // SPACING_ON_HOLDS_menu)
 
-    rows_visible = max(1, holds_menu_height // 70) # How many vertical row should be visible
+    rows_visible = max(1, holds_menu_height // 80) # How many vertical row should be visible
 
     processed_holds_data: list[ProcessedHold] = []
 
@@ -413,17 +409,54 @@ while run:
                 
                 
                 if confirm_rect.collidepoint(mouse_pos):
-                    if file_browser_files:
-                        chosen = file_browser_files[file_browser_selected]
-                        if file_browser_mode == 'save':
-                            save_route(chosen)
+                    # Saving a file
+                    if file_browser_mode == 'save':
+                        # Strips spaces if a name gets typed
+                        if file_browser_input.strip():
+                            chosen = file_browser_input.strip()
+
+                        # Otherwise it will use the selected file in the list
+                        elif file_browser_files:
+                            chosen = file_browser_files[file_browser_selected]
+
+                        # Defaults to route.json if nothing selected
                         else:
+                            chosen = None
+
+                        # Ensures the file ends with .json
+                        if chosen != None:
+                            if not chosen.lower().endswith('.json'):
+                                chosen += '.json'
+                        save_route(chosen)
+
+                    # Loading a file
+                    else:
+                        if file_browser_files:
+                            chosen = file_browser_files[file_browser_selected]
                             load_route(chosen)
                     file_browser_open = False
-
+                    
                 # Will close the file browser if cancel is clicked
                 if cancel_rect.collidepoint(mouse_pos):
                     file_browser_open = False
+                    
+
+            elif event.type == pygame.KEYDOWN:
+                # Allows typing in the file browser if in save mode and there is room for more files
+                save_can_type = file_browser_mode == 'save' and len(file_browser_files) < FILE_BROWSER_MAX_VISIBLE_ITEMS
+                if file_browser_mode == 'save':
+                    if event.key == pygame.K_BACKSPACE and save_can_type:
+                        file_browser_input = file_browser_input[:-1] # Removes the last character from the string
+                    else:
+                        # Saves character input
+                        if (
+                            save_can_type
+                            and len(event.unicode) > 0
+                            and 32 <= ord(event.unicode) <= 126 # Keeps the ASCII between 32 and 126 (printable characters)
+                            and len(file_browser_input) < FILE_BROWSER_MAX_CHARACTER_INPUT # Keeps the input under the maximum character limit
+                            and event.unicode not in BLOCKED_CHARACTERS # Prevents blocked characters
+                        ): 
+                            file_browser_input += event.unicode
 
         # ---------Main event handling-------------
         if event.type == pygame.QUIT: 
@@ -460,12 +493,15 @@ while run:
                     holds_on_grid.clear()
                     settings_menu_open = False
                 elif save_popup_button_rect.collidepoint(mouse_pos):
+                    # open file browser in save mode
                     file_browser_open = True
                     file_browser_mode = 'save'
                     file_browser_files = refresh_file_list()
+                    file_browser_input = ''
                     file_browser_selected = 0
                     settings_menu_open = False
                 elif load_popup_button_rect.collidepoint(mouse_pos):
+                    # open file browser in load mode
                     file_browser_open = True
                     file_browser_mode = 'load'
                     file_browser_files = refresh_file_list()
@@ -642,9 +678,16 @@ while run:
             else:
             # Not selected
                 pygame.draw.rect(screen, "#323232", rect)
-            display_name = get_slot_display_name(file_name, SAVES_FOLDER_NAME)
-            txt = font.render(display_name, True, (255, 255, 255))
+            txt = font.render(file_name, True, (255, 255, 255))
             screen.blit(txt, (rect.x + 6, rect.y + 2))
+
+        # Only shows the typing box if there is less than the maximum amount of visible files
+        save_can_type = file_browser_mode == 'save' and len(file_browser_files) < FILE_BROWSER_MAX_VISIBLE_ITEMS
+        if save_can_type:
+            input_rect = pygame.Rect(file_browser_rect.x + 20, file_browser_rect.bottom - 95, file_browser_rect.width - 40, 30)
+            pygame.draw.rect(screen, (255, 255, 255), input_rect, 1)
+            input_txt = font.render(file_browser_input or "Type new filename (optional)", True, (200, 200, 200) if not file_browser_input else (255, 255, 255))
+            screen.blit(input_txt, (input_rect.x + 6, input_rect.y + 2))
 
         # Drawing confirm and cancel buttons
         confirm_rect = pygame.Rect(file_browser_rect.right - 120, file_browser_rect.bottom - 50, 100, 35)
